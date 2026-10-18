@@ -10,6 +10,7 @@ import android.os.Build
 import android.widget.RemoteViews
 import androidx.compose.ui.graphics.toArgb
 import com.metrolist.music.R
+import com.metrolist.music.constants.CurrentThemeColorKey
 import com.metrolist.music.constants.DarkModeKey
 import com.metrolist.music.constants.PureBlackKey
 import com.metrolist.music.constants.SelectedThemeColorKey
@@ -32,7 +33,9 @@ internal object WidgetTheme {
         val preferences = context.dataStore.data.first()
         return create(
             context = context,
-            selectedThemeColor = preferences[SelectedThemeColorKey] ?: DefaultThemeColor.toArgb(),
+            themeColor = preferences[CurrentThemeColorKey]
+                ?: preferences[SelectedThemeColorKey]
+                ?: DefaultThemeColor.toArgb(),
             darkMode = preferences[DarkModeKey] ?: "AUTO",
             pureBlack = preferences[PureBlackKey] ?: false,
         )
@@ -40,11 +43,11 @@ internal object WidgetTheme {
 
     fun refreshWidgets(
         context: Context,
-        selectedThemeColor: Int,
+        themeColor: Int,
         darkMode: String,
         pureBlack: Boolean,
     ) {
-        val colors = create(context, selectedThemeColor, darkMode, pureBlack)
+        val colors = create(context, themeColor, darkMode, pureBlack)
         val manager = AppWidgetManager.getInstance(context)
 
         manager.getAppWidgetIds(ComponentName(context, MusicWidgetReceiver::class.java)).forEach { id ->
@@ -172,7 +175,7 @@ internal object WidgetTheme {
 
     private fun create(
         context: Context,
-        selectedThemeColor: Int,
+        themeColor: Int,
         darkMode: String,
         pureBlack: Boolean,
     ): WidgetThemeColors {
@@ -182,7 +185,7 @@ internal object WidgetTheme {
             else -> context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
                 Configuration.UI_MODE_NIGHT_YES
         }
-        val useSystemColors = selectedThemeColor == DefaultThemeColor.toArgb() &&
+        val useSystemColors = themeColor == DefaultThemeColor.toArgb() &&
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
         val seed = if (useSystemColors) {
             context.getColor(
@@ -190,7 +193,7 @@ internal object WidgetTheme {
                 else android.R.color.system_accent1_600,
             )
         } else {
-            selectedThemeColor
+            themeColor
         }
 
         val surface = when {
