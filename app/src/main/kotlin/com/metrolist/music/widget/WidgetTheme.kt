@@ -9,7 +9,6 @@ import android.graphics.PorterDuff
 import android.os.Build
 import android.widget.RemoteViews
 import androidx.compose.ui.graphics.toArgb
-import androidx.datastore.preferences.core.first
 import com.metrolist.music.R
 import com.metrolist.music.constants.DarkModeKey
 import com.metrolist.music.constants.PureBlackKey
