@@ -261,13 +261,11 @@ internal object WidgetTheme {
                 "setBackgroundTintList",
                 android.content.res.ColorStateList.valueOf(color),
             )
-        } else {
-            // RemoteViews.setColorStateList is only available from Android 12.
-            // Keep theme color updates working on older supported Android versions.
-            views.setInt(viewId, "setBackgroundColor", color)
         }
+        // On Android 11 and earlier, RemoteViews cannot set a ColorStateList
+        // background tint. Calling setBackgroundColor would replace the rounded
+        // shape drawable with a square ColorDrawable, so retain the XML shape.
     }
-
     private fun tintImage(views: RemoteViews, viewId: Int, color: Int) {
         views.setInt(viewId, "setColorFilter", color)
     }
