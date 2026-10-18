@@ -99,7 +99,7 @@ internal object WidgetTheme {
                 views.setTextColor(R.id.widget_artist_name, colors.textSecondary)
                 tintBackground(views, R.id.widget_play_pause_container, colors.primaryContainer)
                 tintImage(views, R.id.widget_play_pause, colors.onPrimaryContainer)
-                tintBackground(views, R.id.widget_like_button, colors.primaryContainer)
+                tintBackground(views, R.id.widget_like_button_container, colors.primaryContainer)
                 tintImage(views, R.id.widget_like_button, colors.primary)
                 tintImage(views, R.id.widget_progress_fill, colors.primary)
                 tintImage(views, R.id.widget_progress_track, colors.progressTrack)
@@ -111,7 +111,7 @@ internal object WidgetTheme {
                 views.setTextColor(R.id.widget_wide_artist_name, colors.textSecondary)
                 tintBackground(views, R.id.widget_wide_play_container, colors.primaryContainer)
                 tintImage(views, R.id.widget_wide_play_pause, colors.onPrimaryContainer)
-                tintBackground(views, R.id.widget_wide_like_button, colors.primaryContainer)
+                tintBackground(views, R.id.widget_wide_like_button_container, colors.primaryContainer)
                 tintImage(views, R.id.widget_wide_like_button, colors.primary)
             }
 
@@ -137,7 +137,7 @@ internal object WidgetTheme {
                 tintImage(views, R.id.widget_playlist_next_icon, colors.textPrimary)
                 tintBackground(views, R.id.widget_playlist_play_pause_container, colors.primaryContainer)
                 tintImage(views, R.id.widget_playlist_play_pause, colors.onPrimaryContainer)
-                tintBackground(views, R.id.widget_playlist_like_button, colors.primaryContainer)
+                tintBackground(views, R.id.widget_playlist_like_container, colors.primaryContainer)
                 tintImage(views, R.id.widget_playlist_like_button, colors.primary)
                 tintImage(views, R.id.widget_playlist_progress_fill, colors.primary)
                 for (index in 1..8) {
@@ -251,20 +251,46 @@ internal object WidgetTheme {
         )
     }
 
-    private fun tintRoot(views: RemoteViews, color: Int) =
-        tintBackground(views, android.R.id.background, color)
+    private fun tintRoot(views: RemoteViews, color: Int) {
+        tintImage(views, R.id.widget_theme_root_background, color)
+    }
 
     private fun tintBackground(views: RemoteViews, viewId: Int, color: Int) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val backgroundImageId = when (viewId) {
+            android.R.id.background,
+            R.id.widget_recognizer_tiny_root -> R.id.widget_theme_root_background
+            R.id.widget_play_pause_container -> R.id.widget_play_pause_background
+            R.id.widget_like_button_container -> R.id.widget_like_button_background
+            R.id.widget_wide_play_container -> R.id.widget_wide_play_background
+            R.id.widget_wide_like_button_container -> R.id.widget_wide_like_button_background
+            R.id.widget_compact_play_container -> R.id.widget_compact_play_background
+            R.id.widget_turntable_nav_container -> R.id.widget_turntable_nav_background
+            R.id.widget_turntable_play_container -> R.id.widget_turntable_play_background
+            R.id.widget_playlist_play_pause_container -> R.id.widget_playlist_play_pause_background
+            R.id.widget_playlist_like_container -> R.id.widget_playlist_like_background
+            R.id.widget_recognizer_mic_container -> R.id.widget_recognizer_mic_background
+            R.id.widget_playlist_card_1_play_container -> R.id.widget_playlist_card_1_play_background
+            R.id.widget_playlist_card_2_play_container -> R.id.widget_playlist_card_2_play_background
+            R.id.widget_playlist_card_3_play_container -> R.id.widget_playlist_card_3_play_background
+            R.id.widget_playlist_card_4_play_container -> R.id.widget_playlist_card_4_play_background
+            R.id.widget_playlist_card_5_play_container -> R.id.widget_playlist_card_5_play_background
+            R.id.widget_playlist_card_6_play_container -> R.id.widget_playlist_card_6_play_background
+            R.id.widget_playlist_card_7_play_container -> R.id.widget_playlist_card_7_play_background
+            R.id.widget_playlist_card_8_play_container -> R.id.widget_playlist_card_8_play_background
+            else -> 0
+        }
+
+        if (backgroundImageId != 0) {
+            // Tint the original shape drawable through an ImageView. This works
+            // on Android 11 and older while preserving its rounded corners.
+            tintImage(views, backgroundImageId, color)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             views.setColorStateList(
                 viewId,
                 "setBackgroundTintList",
                 android.content.res.ColorStateList.valueOf(color),
             )
         }
-        // On Android 11 and earlier, RemoteViews cannot set a ColorStateList
-        // background tint. Calling setBackgroundColor would replace the rounded
-        // shape drawable with a square ColorDrawable, so retain the XML shape.
     }
     private fun tintImage(views: RemoteViews, viewId: Int, color: Int) {
         views.setInt(viewId, "setColorFilter", color)
