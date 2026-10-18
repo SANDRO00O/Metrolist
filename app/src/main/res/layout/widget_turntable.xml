@@ -19,6 +19,7 @@
 
     <!-- Navigation Buttons Container - Top Right (Previous & Next) -->
     <LinearLayout
+        android:id="@+id/widget_turntable_nav_container"
         android:layout_width="wrap_content"
         android:layout_height="36dp"
         android:layout_gravity="top|end"
