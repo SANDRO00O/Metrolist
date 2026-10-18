@@ -5,7 +5,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Color
-import android.graphics.PorterDuff
 import android.os.Build
 import android.widget.RemoteViews
 import androidx.compose.ui.graphics.toArgb
@@ -256,7 +255,17 @@ internal object WidgetTheme {
         tintBackground(views, android.R.id.background, color)
 
     private fun tintBackground(views: RemoteViews, viewId: Int, color: Int) {
-        views.setDrawableParameters(viewId, true, -1, color, PorterDuff.Mode.SRC_IN, -1)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            views.setColorStateList(
+                viewId,
+                "setBackgroundTintList",
+                android.content.res.ColorStateList.valueOf(color),
+            )
+        } else {
+            // RemoteViews.setColorStateList is only available from Android 12.
+            // Keep theme color updates working on older supported Android versions.
+            views.setInt(viewId, "setBackgroundColor", color)
+        }
     }
 
     private fun tintImage(views: RemoteViews, viewId: Int, color: Int) {
