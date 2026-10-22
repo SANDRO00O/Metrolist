@@ -16,6 +16,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.util.LruCache
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
@@ -625,7 +626,7 @@ class MainActivity : FragmentActivity() {
             mutableStateOf(selectedThemeColor)
         }
 
-        val themeColorCache = remember { mutableMapOf<String, Color>() }
+        val themeColorCache = remember { LruCache<String, Color>(64) }
 
         LaunchedEffect(selectedThemeColor) {
             if (!enableDynamicTheme) {
@@ -644,7 +645,7 @@ class MainActivity : FragmentActivity() {
                 .distinctUntilChanged { old, new -> old?.id == new?.id }
                 .collectLatest { song ->
                     if (song?.thumbnailUrl != null) {
-                        val cached = themeColorCache[song.thumbnailUrl]
+                        val cached = themeColorCache.get(song.thumbnailUrl)
                         if (cached != null) {
                             withFrameNanos { }
                             themeColor = cached
@@ -657,6 +658,7 @@ class MainActivity : FragmentActivity() {
                                         ImageRequest
                                             .Builder(this@MainActivity)
                                             .data(song.thumbnailUrl)
+                                            .size(128, 128)
                                             .allowHardware(false)
                                             .memoryCachePolicy(CachePolicy.ENABLED)
                                             .diskCachePolicy(CachePolicy.ENABLED)
@@ -665,7 +667,7 @@ class MainActivity : FragmentActivity() {
                                             .build(),
                                     )
                                 val extractedColor = result.image?.toBitmap()?.extractThemeColor() ?: selectedThemeColor
-                                themeColorCache[song.thumbnailUrl] = extractedColor
+                                themeColorCache.put(song.thumbnailUrl, extractedColor)
                                 withFrameNanos { }
                                 themeColor = extractedColor
                             } catch (e: Exception) {
