@@ -197,6 +197,10 @@ interface DatabaseDao {
     fun likedSongsByCreateDateAsc(): Flow<List<Song>>
 
     @Transaction
+    @Query("SELECT * FROM song WHERE liked ORDER BY RANDOM() LIMIT :limit")
+    fun randomLikedSongs(limit: Int): Flow<List<Song>>
+
+    @Transaction
     @Query("SELECT * FROM song WHERE liked ORDER BY likedDate DESC, rowId DESC LIMIT :limit OFFSET :offset")
     suspend fun likedSongsByCreateDateDesc(limit: Int, offset: Int): List<Song>
 
