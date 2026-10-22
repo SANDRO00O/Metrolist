@@ -68,6 +68,9 @@ jobs:
           path: app/pr-debug.keystore
           key: ${{ steps.pr_keystore.outputs.cache-primary-key }}
 
+      - name: Run GMS Debug unit tests
+        run: ./gradlew --console=plain :app:testGmsDebugUnitTest --warning-mode summary
+
       - name: Build GMS Debug APK
         run: ./gradlew --console=plain assembleGmsDebug --warning-mode summary
         env:
