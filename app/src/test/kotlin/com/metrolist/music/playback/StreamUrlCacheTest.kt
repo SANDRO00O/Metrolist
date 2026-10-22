@@ -150,7 +150,7 @@ class StreamUrlCacheTest {
     }
 
     @Test
-    fun `cache preserves bounded range policy` {
+    fun `cache preserves bounded range policy`() {
         val cache = StreamUrlCache(currentTimeMillis = { 1_000L })
         cache.put(
             mediaId = "song",
