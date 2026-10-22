@@ -85,21 +85,14 @@ class WrappedManager(
 
                     val createdPlaylist = databaseDao.playlist(playlistId).first()
                     if (createdPlaylist != null) {
-                        // Keep one page of statistics and song IDs in memory at a time.
-                        val pageSize = 100
-                        var offset = 0
-                        while (true) {
-                            val page = databaseDao.mostPlayedSongsStats(
-                                fromTimestamp,
-                                limit = pageSize,
-                                offset = offset,
-                                toTimeStamp = toTimestamp,
-                            ).first()
-                            if (page.isEmpty()) break
-                            databaseDao.addSongsToPlaylist(createdPlaylist, page.map { it.id to null })
-                            offset += page.size
-                            if (page.size < pageSize) break
-                        }
+                        // Room pages query results in one transaction, avoiding one unbounded
+                        // list while preserving atomic insertion of all playlist entries.
+                        databaseDao.addMostPlayedSongsToPlaylist(
+                            playlist = createdPlaylist,
+                            fromTimeStamp = fromTimestamp,
+                            toTimeStamp = toTimestamp,
+                            pageSize = 100,
+                        )
                     } else {
                         Timber.tag("WrappedManager")
                             .e("Failed to retrieve created playlist with id: $playlistId")

@@ -440,6 +440,33 @@ interface DatabaseDao {
         toTimeStamp: LocalDateTime? = LocalDateTime.now(),
     ): Flow<List<SongWithStats>>
 
+    /**
+     * Inserts a statistics-based playlist in bounded batches while keeping the whole insertion atomic.
+     * Only one page of SongWithStats rows and song IDs is materialized at a time.
+     */
+    @Transaction
+    suspend fun addMostPlayedSongsToPlaylist(
+        playlist: Playlist,
+        fromTimeStamp: LocalDateTime,
+        toTimeStamp: LocalDateTime,
+        pageSize: Int = 100,
+    ) {
+        require(pageSize > 0) { "pageSize must be positive" }
+        var offset = 0
+        while (true) {
+            val page = mostPlayedSongsStats(
+                fromTimeStamp = fromTimeStamp,
+                limit = pageSize,
+                offset = offset,
+                toTimeStamp = toTimeStamp,
+            ).first()
+            if (page.isEmpty()) break
+            addSongsToPlaylist(playlist, page.map { it.id to null })
+            offset += page.size
+            if (page.size < pageSize) break
+        }
+    }
+
     // Time Transfer
     @Query("UPDATE event SET songId = :toSongId WHERE songId = :fromSongId")
     suspend fun transferEvents(fromSongId: String, toSongId: String): Int
