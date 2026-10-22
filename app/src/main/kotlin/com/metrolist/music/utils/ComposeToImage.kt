@@ -31,11 +31,12 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.withClip
 import androidx.core.graphics.withTranslation
 import androidx.palette.graphics.Palette
-import coil3.ImageLoader
+import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.toBitmap
 import com.metrolist.music.R
+import com.metrolist.music.extensions.isMemoryConstrainedDevice
 import com.metrolist.music.ui.component.LyricsBackgroundStyle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -60,10 +61,10 @@ object ComposeToImage {
         lyricsAlignment: Layout.Alignment = Layout.Alignment.ALIGN_CENTER,
     ): Bitmap =
         withContext(Dispatchers.Default) {
-            // Use fixed high resolution as requested (2160x2160)
-            // This ensures consistent high-quality output regardless of the device screen
-            val imageWidth = 2160
-            val imageHeight = 2160
+            // Keep full resolution on capable devices while reducing export-time bitmap pressure on low-RAM devices.
+            val imageSize = if (context.isMemoryConstrainedDevice()) 1440 else 2160
+            val imageWidth = imageSize
+            val imageHeight = imageSize
 
             val bitmap = createBitmap(imageWidth, imageHeight)
             val canvas = Canvas(bitmap)
@@ -91,12 +92,12 @@ object ComposeToImage {
             var coverArtBitmap: Bitmap? = null
             if (coverArtUrl != null) {
                 try {
-                    val imageLoader = ImageLoader(context)
+                    val imageLoader = context.imageLoader
                     val request =
                         ImageRequest
                             .Builder(context)
                             .data(coverArtUrl)
-                            .size(1024)
+                            .size(512)
                             .allowHardware(false)
                             .build()
                     val result = imageLoader.execute(request)
