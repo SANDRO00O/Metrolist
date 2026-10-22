@@ -196,6 +196,7 @@ class PlaylistWidgetManager @Inject constructor(
         appWidgetManager.partiallyUpdateAppWidget(widgetIds, views)
     }
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private fun observePinnedPlaylistSnapshots(): kotlinx.coroutines.flow.Flow<List<PlaylistSnapshot>> =
         database.speedDialDao.getPlaylistItems(8).flatMapLatest { items ->
             val playlistItems = items.filter { it.type == "PLAYLIST" || it.type == "LOCAL_PLAYLIST" }

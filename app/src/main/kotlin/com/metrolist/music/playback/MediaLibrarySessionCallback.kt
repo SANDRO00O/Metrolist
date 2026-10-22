@@ -735,7 +735,10 @@ constructor(
                         }
                         PlaylistEntity.DOWNLOADED_PLAYLIST_ID -> {
                             val downloads = downloadUtil.downloads.value
-                            val downloadedItems = ArrayList<Triple<Long, String, MediaItem>>()
+                            // Keep only small sort descriptors while scanning the database. Build
+                            // MediaItems later in bounded relation-hydration batches.
+                            val downloadedTracks = ArrayList<Triple<Long, Int, String>>()
+                            var sourceOrder = 0
                             var offset = 0
                             while (true) {
                                 val page = database.allSongs(ANDROID_AUTO_QUEUE_PAGE_SIZE, offset)
@@ -743,16 +746,27 @@ constructor(
                                 page.forEach { song ->
                                     val download = downloads[song.id]
                                     if (download?.state == Download.STATE_COMPLETED) {
-                                        downloadedItems += Triple(download.updateTimeMs, song.id, song.toMediaItem())
+                                        downloadedTracks += Triple(download.updateTimeMs, sourceOrder, song.id)
+                                        sourceOrder++
                                     }
                                 }
                                 offset += page.size
                                 if (page.size < ANDROID_AUTO_QUEUE_PAGE_SIZE) break
                             }
-                            downloadedItems.sortBy { it.first }
-                            val items = ArrayList<MediaItem>(downloadedItems.size)
-                            downloadedItems.forEach { items.add(it.third) }
-                            downloadedItems.clear()
+
+                            downloadedTracks.sortWith(compareBy<Triple<Long, Int, String>> { it.first }.thenBy { it.second })
+                            val items = ArrayList<MediaItem>(downloadedTracks.size)
+                            var trackOffset = 0
+                            while (trackOffset < downloadedTracks.size) {
+                                val end = minOf(trackOffset + ANDROID_AUTO_QUEUE_PAGE_SIZE, downloadedTracks.size)
+                                val ids = ArrayList<String>(end - trackOffset)
+                                for (index in trackOffset until end) {
+                                    ids += downloadedTracks[index].third
+                                }
+                                val songsById = database.songsByIds(ids).associateBy { it.id }
+                                ids.forEach { id -> songsById[id]?.let { items += it.toMediaItem() } }
+                                trackOffset = end
+                            }
                             val startIndex = items.indexOfFirst { it.mediaId == songId }.takeIf { it >= 0 } ?: 0
                             if (songId == MusicService.SHUFFLE_ACTION) {
                                 MediaItemsWithStartPosition(items.shuffled(), 0, C.TIME_UNSET)

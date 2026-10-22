@@ -760,6 +760,10 @@ interface DatabaseDao {
     suspend fun allSongs(limit: Int, offset: Int): List<Song>
 
     @Transaction
+    @Query("SELECT * FROM song WHERE id IN (:songIds)")
+    suspend fun songsByIds(songIds: List<String>): List<Song>
+
+    @Transaction
     @SuppressWarnings(RoomWarnings.QUERY_MISMATCH)
     @Query(
         """
