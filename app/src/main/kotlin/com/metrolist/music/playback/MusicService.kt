@@ -183,6 +183,7 @@ import com.metrolist.music.extensions.collect
 import com.metrolist.music.extensions.collectLatest
 import com.metrolist.music.extensions.currentMetadata
 import com.metrolist.music.extensions.findNextMediaItemById
+import com.metrolist.music.extensions.isMemoryConstrainedDevice
 import com.metrolist.music.extensions.mediaItems
 import com.metrolist.music.extensions.metadata
 import com.metrolist.music.extensions.setOffloadEnabled
@@ -1322,6 +1323,12 @@ class MusicService :
                     DefaultLoadControl
                         .Builder()
                         .setBufferDurationsMs(50_000, 50_000, 750, 2_000)
+                        .apply {
+                            if (isMemoryConstrainedDevice()) {
+                                // Audio-only streams need much less allocator memory than the Media3 default target.
+                                setTargetBufferBytes(6 * 1024 * 1024)
+                            }
+                        }
                         .build(),
                 )
                 .setHandleAudioBecomingNoisy(true)
