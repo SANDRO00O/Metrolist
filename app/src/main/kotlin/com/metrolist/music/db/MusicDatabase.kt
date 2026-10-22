@@ -16,6 +16,7 @@ import androidx.room.DeleteTable
 import androidx.room.RenameColumn
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.metrolist.music.extensions.isMemoryConstrainedDevice
 import androidx.room.TypeConverters
 import androidx.room.migration.AutoMigrationSpec
 import androidx.room.migration.Migration
@@ -188,6 +189,9 @@ abstract class InternalDatabase : RoomDatabase() {
             dbName: String = DB_NAME,
             withPragmaCallback: Boolean = true,
         ): InternalDatabase {
+            val memoryConstrained = context.isMemoryConstrainedDevice()
+            val executorThreads = if (memoryConstrained) 2 else 4
+            val sqliteCacheSizeKb = if (memoryConstrained) 4_096 else 16_000
             val builder = Room
                 .databaseBuilder(context, InternalDatabase::class.java, dbName)
                 .openHelperFactory(BackupBeforeMigrationFactory(context, dbName))
@@ -200,10 +204,10 @@ abstract class InternalDatabase : RoomDatabase() {
                 .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
                 .setTransactionExecutor(
                     java.util.concurrent.Executors
-                        .newFixedThreadPool(4),
+                        .newFixedThreadPool(executorThreads),
                 ).setQueryExecutor(
                     java.util.concurrent.Executors
-                        .newFixedThreadPool(4),
+                        .newFixedThreadPool(executorThreads),
                 )
 
             if (withPragmaCallback) {
@@ -211,7 +215,7 @@ abstract class InternalDatabase : RoomDatabase() {
                     object : RoomDatabase.Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)
-                            applyPragmaSettings(db)
+                            applyPragmaSettings(db, sqliteCacheSizeKb)
                         }
 
                         override fun onOpen(db: SupportSQLiteDatabase) {
@@ -239,10 +243,10 @@ abstract class InternalDatabase : RoomDatabase() {
     }
 }
 
-private fun applyPragmaSettings(db: SupportSQLiteDatabase) {
+private fun applyPragmaSettings(db: SupportSQLiteDatabase, cacheSizeKb: Int) {
     try {
         db.query("PRAGMA busy_timeout = 60000").close()
-        db.query("PRAGMA cache_size = -16000").close()
+        db.query("PRAGMA cache_size = -$cacheSizeKb").close()
         db.query("PRAGMA wal_autocheckpoint = 1000").close()
         db.query("PRAGMA synchronous = NORMAL").close()
     } catch (e: Exception) {
