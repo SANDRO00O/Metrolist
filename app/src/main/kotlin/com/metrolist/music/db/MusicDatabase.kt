@@ -220,7 +220,7 @@ abstract class InternalDatabase : RoomDatabase() {
 
                         override fun onOpen(db: SupportSQLiteDatabase) {
                             super.onOpen(db)
-                            applyPragmaSettings(db)
+                            applyPragmaSettings(db, sqliteCacheSizeKb)
                         }
 
                         override fun onDestructiveMigration(db: SupportSQLiteDatabase) {
