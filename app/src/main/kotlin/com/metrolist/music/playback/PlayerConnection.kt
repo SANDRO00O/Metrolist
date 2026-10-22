@@ -673,16 +673,17 @@ class PlayerConnection(
     }
 
     fun dispose() {
+        connectionJob.cancel()
         try {
             attachedPlayer?.removeListener(this)
+            Timber.tag(TAG).d("PlayerConnection disposed successfully")
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error during PlayerConnection listener removal")
+        } finally {
             attachedPlayer = null
             shouldBlockPlaybackChanges = null
             onSkipPrevious = null
             onSkipNext = null
-            connectionJob.cancel()
-            Timber.tag(TAG).d("PlayerConnection disposed successfully")
-        } catch (e: Exception) {
-            Timber.tag(TAG).e(e, "Error during PlayerConnection disposal")
         }
     }
 }

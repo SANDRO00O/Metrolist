@@ -427,10 +427,10 @@ interface DatabaseDao {
               WHERE timestamp > :fromTimeStamp
                 AND timestamp <= :toTimeStamp
               GROUP BY songId
-              ORDER BY SUM(playTime) DESC
+              ORDER BY SUM(playTime) DESC, songId ASC
               LIMIT :limit OFFSET :offset) AS top_songs ON s.id = top_songs.songId
         GROUP BY s.id
-        ORDER BY timeListened DESC
+        ORDER BY timeListened DESC, s.id ASC
         """,
     )
     fun mostPlayedSongsStats(

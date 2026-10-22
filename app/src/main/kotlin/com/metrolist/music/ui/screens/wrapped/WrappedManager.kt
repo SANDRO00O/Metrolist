@@ -58,15 +58,20 @@ class WrappedManager(
                 withContext(Dispatchers.IO) {
                     val fromTimestamp = LocalDateTime.of(WrappedConstants.YEAR, 1, 1, 0, 0, 0)
                     val toTimestamp = LocalDateTime.of(WrappedConstants.YEAR, 12, 31, 23, 59, 59)
-                    val allSongs = databaseDao.mostPlayedSongsStats(fromTimestamp, toTimeStamp = toTimestamp, limit = -1).first()
-
                     val playlistId = UUID.randomUUID().toString()
 
                     val drawableId = context.resources.getIdentifier(imageResName, "drawable", context.packageName)
                     val bitmap = BitmapFactory.decodeResource(context.resources, drawableId)
+                        ?: error("Wrapped playlist artwork resource could not be decoded")
                     val file = File(context.cacheDir, "$playlistId.png")
-                    FileOutputStream(file).use {
-                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+                    try {
+                        FileOutputStream(file).use { output ->
+                            check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) {
+                                "Failed to encode Wrapped playlist artwork"
+                            }
+                        }
+                    } finally {
+                        bitmap.recycle()
                     }
 
                     val newPlaylist = PlaylistEntity(
@@ -80,8 +85,21 @@ class WrappedManager(
 
                     val createdPlaylist = databaseDao.playlist(playlistId).first()
                     if (createdPlaylist != null) {
-                        val songIds = allSongs.map { it.id to null }
-                        databaseDao.addSongsToPlaylist(createdPlaylist, songIds)
+                        // Keep one page of statistics and song IDs in memory at a time.
+                        val pageSize = 100
+                        var offset = 0
+                        while (true) {
+                            val page = databaseDao.mostPlayedSongsStats(
+                                fromTimestamp,
+                                limit = pageSize,
+                                offset = offset,
+                                toTimeStamp = toTimestamp,
+                            ).first()
+                            if (page.isEmpty()) break
+                            databaseDao.addSongsToPlaylist(createdPlaylist, page.map { it.id to null })
+                            offset += page.size
+                            if (page.size < pageSize) break
+                        }
                     } else {
                         Timber.tag("WrappedManager")
                             .e("Failed to retrieve created playlist with id: $playlistId")
