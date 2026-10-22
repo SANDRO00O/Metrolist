@@ -48,16 +48,40 @@ class AndroidAutoDatabasePaginationTest {
     @Test
     fun `random liked song query returns only the requested number of unique songs`() = runBlocking {
         database.runInTransaction {
+            database.dao.insert(ArtistEntity(id = "test-artist", name = "Test Artist"))
+            database.dao.insert(
+                AlbumEntity(
+                    id = "test-album",
+                    title = "Test Album",
+                    songCount = 11,
+                    duration = 0,
+                ),
+            )
+
             repeat(10) { index ->
+                val songId = "liked-$index"
                 database.dao.insert(
                     SongEntity(
-                        id = "liked-$index",
+                        id = songId,
                         title = "Liked $index",
+                        albumId = "test-album",
                         liked = true,
                     ),
                 )
+                database.dao.insert(SongArtistMap(songId = songId, artistId = "test-artist", position = 0))
+                database.dao.insert(SongAlbumMap(songId = songId, albumId = "test-album", index = index))
             }
-            database.dao.insert(SongEntity(id = "not-liked", title = "Not liked", liked = false))
+
+            database.dao.insert(
+                SongEntity(
+                    id = "not-liked",
+                    title = "Not liked",
+                    albumId = "test-album",
+                    liked = false,
+                ),
+            )
+            database.dao.insert(SongArtistMap(songId = "not-liked", artistId = "test-artist", position = 0))
+            database.dao.insert(SongAlbumMap(songId = "not-liked", albumId = "test-album", index = 10))
         }
 
         val selected = database.dao.randomLikedSongs(limit = 5).first()
