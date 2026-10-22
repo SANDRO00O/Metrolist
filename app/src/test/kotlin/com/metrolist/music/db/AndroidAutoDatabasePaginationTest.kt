@@ -45,6 +45,28 @@ class AndroidAutoDatabasePaginationTest {
     }
 
     @Test
+    fun `random liked song query returns only the requested number of unique songs`() = runBlocking {
+        database.runInTransaction {
+            repeat(10) { index ->
+                database.dao.insert(
+                    SongEntity(
+                        id = "liked-$index",
+                        title = "Liked $index",
+                        liked = true,
+                    ),
+                )
+            }
+            database.dao.insert(SongEntity(id = "not-liked", title = "Not liked", liked = false))
+        }
+
+        val selected = database.dao.randomLikedSongs(limit = 5).first()
+
+        assertEquals(5, selected.size)
+        assertTrue(selected.all { it.song.liked })
+        assertEquals(selected.size, selected.map { it.id }.toSet().size)
+    }
+
+    @Test
     fun `song relation query stays below Room recursive fetch threshold`() = runBlocking {
         val libraryDate = LocalDateTime.of(2026, 1, 1, 0, 0)
         database.runInTransaction {
