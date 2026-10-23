@@ -273,7 +273,7 @@ class HomeViewModel @Inject constructor(
     }
     private suspend fun getDailyDiscover() {
         val hideVideoSongs = context.dataStore.get(HideVideoSongsKey, false)
-        val seeds = database.randomLikedSongs(limit = 5).first()
+        val seeds = database.randomLikedSongs(limit = 5)
         if (seeds.isEmpty()) return
         
         // Use a synchronized list to collect results safely from concurrent coroutines

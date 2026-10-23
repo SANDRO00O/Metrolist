@@ -200,9 +200,25 @@ interface DatabaseDao {
     @Query("SELECT * FROM song WHERE liked ORDER BY likedDate LIMIT :limit")
     fun likedSongsByCreateDateAsc(limit: Int): Flow<List<Song>>
 
+    @Query("SELECT id FROM song WHERE liked ORDER BY RANDOM() LIMIT :limit")
+    suspend fun randomLikedSongIds(limit: Int): List<String>
+
     @Transaction
-    @Query("SELECT * FROM song WHERE liked ORDER BY RANDOM() LIMIT :limit")
-    fun randomLikedSongs(limit: Int): Flow<List<Song>>
+    suspend fun randomLikedSongs(limit: Int): List<Song> {
+        if (limit <= 0) return emptyList()
+
+        val ids = randomLikedSongIds(limit)
+        if (ids.isEmpty()) return emptyList()
+
+        // Sample IDs first, then hydrate only those songs through the normal relation query.
+        // This keeps the random selection bounded without running the relation mapper directly
+        // over an ORDER BY RANDOM() parent query.
+        val songsById = ids.chunked(500)
+            .flatMap { songsByIds(it) }
+            .associateBy { it.id }
+
+        return ids.mapNotNull { songsById[it] }
+    }
 
     @Transaction
     @Query("SELECT * FROM song WHERE liked ORDER BY likedDate DESC, rowId DESC LIMIT :limit OFFSET :offset")
