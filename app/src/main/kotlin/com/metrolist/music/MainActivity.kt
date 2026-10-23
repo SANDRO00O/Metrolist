@@ -23,8 +23,6 @@ import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -175,7 +173,6 @@ import com.metrolist.music.constants.VideoThumbnailMigrationDoneKey
 import com.metrolist.music.db.MusicDatabase
 import com.metrolist.music.db.entities.SearchHistory
 import com.metrolist.music.extensions.toEnum
-import com.metrolist.music.extensions.isMemoryConstrainedDevice
 import com.metrolist.music.lyrics.LyricsProviderRegistry
 import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.playback.DownloadUtil
@@ -1344,8 +1341,9 @@ class MainActivity : FragmentActivity() {
                                 )
                             }
                             Box(Modifier.weight(1f)) {
-                                // Avoid composing two heavyweight destinations at once on low-RAM devices.
-                                val reducePageTransitions = remember { this@MainActivity.isMemoryConstrainedDevice() }
+                                // Keep transitions perceptible but short. The library's expensive
+                                // processing is cached and moved off Main separately, so animations
+                                // no longer need to be disabled on low-RAM devices.
                                 NavHost(
                                     navController = navController,
                                     startDestination =
@@ -1355,59 +1353,51 @@ class MainActivity : FragmentActivity() {
                                             NavigationTab.LIBRARY -> Screens.Library
                                         }.route,
                                     enterTransition = {
-                                        if (reducePageTransitions) {
-                                            EnterTransition.None
-                                        } else {
-                                            val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
-                                            val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
+                                        val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
+                                        val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
 
-                                            if (currentRouteIndex == -1 || currentRouteIndex > previousRouteIndex) {
-                                                slideInHorizontally { it / 8 } + fadeIn(tween(200))
-                                            } else {
-                                                slideInHorizontally { -it / 8 } + fadeIn(tween(200))
-                                            }
+                                        if (currentRouteIndex == -1 || currentRouteIndex > previousRouteIndex) {
+                                            slideInHorizontally(animationSpec = tween(140)) { width -> width / 16 } +
+                                                fadeIn(tween(140))
+                                        } else {
+                                            slideInHorizontally(animationSpec = tween(140)) { width -> -width / 16 } +
+                                                fadeIn(tween(140))
                                         }
                                     },
                                     exitTransition = {
-                                        if (reducePageTransitions) {
-                                            ExitTransition.None
-                                        } else {
-                                            val currentRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
-                                            val targetRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
+                                        val currentRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
+                                        val targetRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
 
-                                            if (targetRouteIndex == -1 || targetRouteIndex > currentRouteIndex) {
-                                                slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
-                                            } else {
-                                                slideOutHorizontally { it / 8 } + fadeOut(tween(200))
-                                            }
+                                        if (targetRouteIndex == -1 || targetRouteIndex > currentRouteIndex) {
+                                            slideOutHorizontally(animationSpec = tween(120)) { width -> -width / 16 } +
+                                                fadeOut(tween(120))
+                                        } else {
+                                            slideOutHorizontally(animationSpec = tween(120)) { width -> width / 16 } +
+                                                fadeOut(tween(120))
                                         }
                                     },
                                     popEnterTransition = {
-                                        if (reducePageTransitions) {
-                                            EnterTransition.None
-                                        } else {
-                                            val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
-                                            val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
+                                        val currentRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
+                                        val previousRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
 
-                                            if (previousRouteIndex != -1 && previousRouteIndex < currentRouteIndex) {
-                                                slideInHorizontally { it / 8 } + fadeIn(tween(200))
-                                            } else {
-                                                slideInHorizontally { -it / 8 } + fadeIn(tween(200))
-                                            }
+                                        if (previousRouteIndex != -1 && previousRouteIndex < currentRouteIndex) {
+                                            slideInHorizontally(animationSpec = tween(140)) { width -> width / 16 } +
+                                                fadeIn(tween(140))
+                                        } else {
+                                            slideInHorizontally(animationSpec = tween(140)) { width -> -width / 16 } +
+                                                fadeIn(tween(140))
                                         }
                                     },
                                     popExitTransition = {
-                                        if (reducePageTransitions) {
-                                            ExitTransition.None
-                                        } else {
-                                            val currentRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
-                                            val targetRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
+                                        val currentRouteIndex = routeIndexMap[initialState.destination.route] ?: -1
+                                        val targetRouteIndex = routeIndexMap[targetState.destination.route] ?: -1
 
-                                            if (currentRouteIndex != -1 && currentRouteIndex < targetRouteIndex) {
-                                                slideOutHorizontally { -it / 8 } + fadeOut(tween(200))
-                                            } else {
-                                                slideOutHorizontally { it / 8 } + fadeOut(tween(200))
-                                            }
+                                        if (currentRouteIndex != -1 && currentRouteIndex < targetRouteIndex) {
+                                            slideOutHorizontally(animationSpec = tween(120)) { width -> -width / 16 } +
+                                                fadeOut(tween(120))
+                                        } else {
+                                            slideOutHorizontally(animationSpec = tween(120)) { width -> width / 16 } +
+                                                fadeOut(tween(120))
                                         }
                                     },
                                     modifier = Modifier.nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
