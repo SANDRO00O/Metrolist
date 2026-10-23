@@ -111,7 +111,14 @@ class AndroidAutoDatabasePaginationTest {
             )
         }
 
-        val selected = database.dao.randomLikedSongs(limit = 5).first()
+        assertEquals("audio/mp4", database.dao.format("liked-0").first()?.mimeType)
+
+        val selected =
+            try {
+                database.dao.randomLikedSongs(limit = 5).first()
+            } catch (failure: Throwable) {
+                throw AssertionError("randomLikedSongs relation loading failed: ${failure.stackTraceToString()}", failure)
+            }
 
         assertEquals(5, selected.size)
         assertTrue(selected.all { it.song.liked })
