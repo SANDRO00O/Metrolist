@@ -71,6 +71,31 @@ jobs:
       - name: Run GMS Debug unit tests
         run: ./gradlew --console=plain :app:testGmsDebugUnitTest --warning-mode summary
 
+      - name: Print unit test failure details
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import glob
+          import xml.etree.ElementTree as ET
+
+          reports = glob.glob("app/build/test-results/testGmsDebugUnitTest/TEST-*.xml")
+          found = False
+          for report in reports:
+              root = ET.parse(report).getroot()
+              for case in root.iter("testcase"):
+                  failure = case.find("failure")
+                  error = case.find("error")
+                  problem = failure if failure is not None else error
+                  if problem is not None:
+                      found = True
+                      print(f"\\nFAILED TEST: {case.attrib.get('classname', '')}.{case.attrib.get('name', '')}")
+                      print(f"TYPE: {problem.attrib.get('type', '')}")
+                      print(f"MESSAGE: {problem.attrib.get('message', '')}")
+                      print(problem.text or "(no stack trace in XML)")
+          if not found:
+              print("No JUnit XML failure details found.")
+          PY
+
       - name: Build GMS Debug APK
         run: ./gradlew --console=plain assembleGmsDebug --warning-mode summary
         env:
