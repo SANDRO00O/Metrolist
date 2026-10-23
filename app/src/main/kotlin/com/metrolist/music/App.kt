@@ -309,11 +309,11 @@ class App :
             .apply {
                 crossfade(!memoryConstrainedDevice)
                 allowHardware(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-                // Memory cache for fast image loading (prevents network requests on recomposition)
+                // Avoid cache thrashing on low-memory phones while keeping the cache bounded.
                 memoryCache {
                     MemoryCache
                         .Builder()
-                        .maxSizePercent(context, if (memoryConstrainedDevice) 0.06 else 0.15)
+                        .maxSizePercent(context, if (memoryConstrainedDevice) 0.10 else 0.15)
                         .build()
                 }
                 if (cacheSize == 0) {

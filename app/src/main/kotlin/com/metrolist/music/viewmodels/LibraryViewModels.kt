@@ -64,6 +64,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -111,7 +112,26 @@ constructor(
                     SongFilter.DOWNLOADED -> database.downloadedSongs(sortType, descending).map { it.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs) }
                     SongFilter.UPLOADED -> database.uploadedSongs(sortType, descending).map { it.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs) }
                 }
-            }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+            }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    val filteredSongs =
+        combine(allSongs, debouncedSearchQuery) { songs, query ->
+            val normalizedQuery = query.normalizeForSearch()
+            if (normalizedQuery.isBlank()) {
+                songs
+            } else {
+                songs.filter { song ->
+                    matchesNormalizedQuery(
+                        normalizedQuery,
+                        song.song.title,
+                        song.album?.title,
+                        *song.artists.map { it.name }.toTypedArray(),
+                    )
+                }
+            }
+        }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun syncLikedSongs() {
         viewModelScope.launch(Dispatchers.IO) { syncUtils.syncLikedSongs() }
@@ -158,17 +178,21 @@ constructor(
                     ArtistFilter.LIKED -> database.artistsBookmarked(sortType, descending)
                     ArtistFilter.LIBRARY -> database.artists(sortType, descending)
                 }
-            }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+            }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val filteredArtists =
-        combine(allArtists, searchQuery) { artists, query ->
+        combine(allArtists, debouncedSearchQuery) { artists, query ->
             val normalizedQuery = query.normalizeForSearch()
-            artists
-                .filter { artist ->
+            if (normalizedQuery.isBlank()) {
+                artists.distinctBy { it.id }
+            } else {
+                artists.filter { artist ->
                     matchesNormalizedQuery(normalizedQuery, artist.artist.name)
-                }
-                .distinctBy { it.id }
-        }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+                }.distinctBy { it.id }
+            }
+        }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun sync() {
         viewModelScope.launch(Dispatchers.IO) { syncUtils.syncArtistsSubscriptions() }
@@ -234,7 +258,25 @@ constructor(
                     AlbumFilter.LIBRARY -> database.albums(sortType, descending).map { it.filterExplicitAlbums(hideExplicit) }
                     AlbumFilter.UPLOADED -> database.albumsUploaded(sortType, descending).map { it.filterExplicitAlbums(hideExplicit) }
                 }
-            }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+            }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    val filteredAlbums =
+        combine(allAlbums, debouncedSearchQuery) { albums, query ->
+            val normalizedQuery = query.normalizeForSearch()
+            if (normalizedQuery.isBlank()) {
+                albums.distinctBy { it.id }
+            } else {
+                albums.filter { album ->
+                    matchesNormalizedQuery(
+                        normalizedQuery,
+                        album.album.title,
+                        *album.artists.map { it.name }.toTypedArray(),
+                    )
+                }.distinctBy { it.id }
+            }
+        }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun sync() {
         viewModelScope.launch(Dispatchers.IO) { syncUtils.syncLikedAlbums() }
@@ -292,7 +334,21 @@ constructor(
             }.distinctUntilChanged()
             .flatMapLatest { (sortType, descending, hideYoutubeShorts) ->
                 database.playlists(sortType, descending).map { it.filterYoutubeShorts(hideYoutubeShorts) }
-            }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+            }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    val filteredPlaylists =
+        combine(allPlaylists, debouncedSearchQuery) { playlists, query ->
+            val normalizedQuery = query.normalizeForSearch()
+            if (normalizedQuery.isBlank()) {
+                playlists
+            } else {
+                playlists.filter { playlist ->
+                    matchesNormalizedQuery(normalizedQuery, playlist.playlist.name)
+                }
+            }
+        }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun sync() {
         viewModelScope.launch(Dispatchers.IO) { syncUtils.syncSavedPlaylists() }
@@ -331,7 +387,8 @@ constructor(
             .flatMapLatest { (sortDesc, hideExplicit, hideVideoSongs) ->
                 val (sortType, descending) = sortDesc
                 database.artistSongs(artistId, sortType, descending).map { it.filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs) }
-            }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+            }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 }
 
 @HiltViewModel
